@@ -57,20 +57,24 @@ UNAME=`uname`
 VERSION=`ssh-keygen -t rsa -f /tmp/version.check -o -a 100 -q -N "" < /dev/null 2> /dev/null; echo $?` # Solaris 11.3's OpenSSH do not support ED25519 keys (Source: https://twitter.com/darrenmoffat/status/641568090581528576), but do support the option to use bcrypt to protect keys at rest. Since that option is common to all newer implementations of OpenSSH, that's what will be used for the version check from now on.
 
 # What follows is just some introductory text.
-
-printf "This script will give you an ssh config for clients and servers that should force the NSA to work for a living.
+help() {
+printf "This script will give you ssh configs for clients and servers\nwhich should force the NSA to work for a living.
 
 For an explanation of everything used in the configs, check out Secure Secure Shell:
 https://stribika.github.io/2015/01/04/secure-secure-shell.html
 Check out the README and the script's source if you want to see how the sausage is made.
 
 Flags:
-            -c  Set up a client. Use this if you're hardening your user config to make connections to remote hosts.
-            -s  Set up a server. Use this flag if you're hardening the ssh config of a remote host to accept connections from users.
+            -c  Set up a client. Use this if you're hardening your user config
+                to make connections to remote hosts.
+            -s  Set up a server. Use this flag if you're hardening the ssh config
+                of a remote host to accept connections from users.
 
-NOTE: Setting up a user config will require sudo access to give you a new ssh_config file.
+NOTE: Setting up a user config will require sudo or root access to give you a
+new ssh_config file.
 
 "
+}
 
 # Before getting too carried away, we're going to check the SSH version in an
 # informal but clear way. This script requires OpenSSH 6.5, so generating a
@@ -172,10 +176,11 @@ ssh_client() {
                 else
                         printf "unset SSH_AUTH_SOCK\n" >> ~/.bash_profile
                 fi
-                printf "Since you use Mac OS X, you had to have a small modification to your .bash_profile in order to connect to remote hosts. Read here and follow the links to learn more: http:/serverfault.com/a/486048\n\n"
-                printf "OpenSSH will work the next time you log in. If you want to use OPenSH imediately, run the following command in your terminal:\n"
+                printf "Since you use Mac OS X, you had to have a small modification to your .bash_profile\n"
+                printf "in order to connect to remote hosts. Read here and follow the links to learn more: http:/serverfault.com/a/486048\n\n"
+                printf "OpenSSH will work the next time you log in. If you want to use OpenSSH imediately, run the following command in your terminal:\n"
                 printf "unset SSH_SOCK_AUTH\n"
-                printf "You only have to run that command once. That line is in your .bash_profile and will automatically make OpenSSH work for you on all future logins.\n"
+                printf "You only have to run that command once. That line is in your .bash_profile\n and will automatically make OpenSSH work for you on all future logins.\n"
         fi
         exit 0
 }
