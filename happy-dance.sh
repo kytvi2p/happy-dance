@@ -84,6 +84,19 @@ fi
 
 rm -rf /tmp/version.check* # Just doing some house keeping.
 
+generate_host_ssh_keys() {
+        ssh_path="$1"
+        cp etc/ssh/sshd_config "${ssh_path}/sshd_config"
+        cd "${ssh_path}"
+        rm ssh_host_*key*
+        ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
+        ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
+        ED25519_fingerprint="$(ssh-keygen -l -f ${ssh_path}/ssh_host_ed25519_key.pub 2> /dev/null)"
+        RSA_fingerprint="$(ssh-keygen -l -f ${ssh_path}/ssh_host_rsa_key.pub)"
+        ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f ${ssh_path}/ssh_host_ed25519_key.pub 2> /dev/null)"
+        RSA_fingerprint_MD5="$(ssh-keygen -l -E md5 -f ${ssh_path}/ssh_host_rsa_key.pub 2> /dev/null)"
+}
+
 generate_moduli() {
         moduli_path="$1"
         printf "Your OS doesn't have an $moduli_path file, so we have to generate one. This might take a while.\n"
@@ -214,25 +227,9 @@ ssh_server() {
                         # worry about your OpenSSH version.
 
                         if [ -d /usr/local/etc/ssh ]; then
-                                cp etc/ssh/sshd_config /usr/local/etc/ssh/sshd_config
-                                cd /usr/local/etc/ssh
-                                rm ssh_host_*key*
-                                ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
-                                ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
-                                ED25519_fingerprint="$(ssh-keygen -l -f /usr/local/etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
-                                RSA_fingerprint="$(ssh-keygen -l -f /usr/local/etc/ssh/ssh_host_rsa_key.pub)"
-                                ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /usr/local/etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
-                                RSA_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /usr/local/etc/ssh/ssh_host_rsa_key.pub 2> /dev/null)"
+                                generate_host_ssh_keys "/usr/local/etc/ssh"
                         else
-                                cp etc/ssh/sshd_config /etc/ssh/sshd_config
-                                cd /etc/ssh
-                                rm ssh_host_*key*
-                                ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
-                                ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
-                                ED25519_fingerprint="$(ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
-                                RSA_fingerprint="$(ssh-keygen -l -f /etc/ssh/ssh_host_rsa_key.pub)"
-                                ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
-                                RSA_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /etc/ssh/ssh_host_rsa_key.pub 2> /dev/null)"
+                                generate_host_ssh_keys "/etc/ssh"
                         fi
 
                         # This next bit of code just prints the key fingerprints. if the *_MD5
