@@ -271,11 +271,10 @@ ssh_server() {
                 3. Remove the line from the ~/.ssh/known_hosts file on your computer which corresponds to this server.
                 4. Try logging in. If it works, HAPPY DANCE!\n"
         fi
-        exit
+        exit 0
 }
 
 # This last bit of code just defines the flags.
-
 while getopts "cs" opt; do
     case $opt in
 
@@ -286,9 +285,6 @@ while getopts "cs" opt; do
         s)
             ssh_server
         ;;
-
-        \?)
-            printf "$opt is invalid.\n"
-        ;;
     esac
 done
+help # only displayed if no parameters were specified
