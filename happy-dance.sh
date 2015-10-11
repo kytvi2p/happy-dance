@@ -143,15 +143,21 @@ ssh_client() {
                 cp etc/ssh/ssh_config /etc/ssh/ssh_config # Removed $PWD
         fi
 
+        if [ $(logname) != $LOGNAME ]; then
+                # script is being run with sudo. Re-set HOME accordingly
+                REALHOME="$(getent passwd $(logname) | awk -F: '{print $6}')"
+        else
+                REALHOME=$HOME
+        fi
+
         # If you don't already have ssh keys, they will be generated for you.
         # If you do have keys, they won't be deleted, because that would be rude.
+        [ -f $REALHOME/.ssh/id_ed25519 ] || ssh-keygen -t ed25519 -f "$REALHOME/.ssh/id_ed25519" -C "$(logname)@$(hostname)" -o -a 100
 
-        [ -f $HOME/.ssh/id_ed25519 ] || ssh-keygen -t ed25519 -o -a 100
-
-        if [ ! -f $HOME/.ssh/id_rsa ]; then
-                ssh-keygen -t rsa -b 4096 -o -a 100
+        if [ ! -f $REALHOME/.ssh/id_rsa ]; then
+                ssh-keygen -t rsa -f "$REALHOME/.ssh/id_rsa" -b 4096 -C "$(logname)@$(hostname)" -o -a 100
         else
-                KEYSIZE=$(ssh-keygen -l -f ~/.ssh/id_rsa.pub | awk '{print $1}')
+                KEYSIZE=$(ssh-keygen -l -f $REALHOME/.ssh/id_rsa.pub | awk '{print $1}')
                 if [ "$KEYSIZE" -ne 4096 ]; then
                         printf "You already have an RSA key but it's only $KEYSIZE bits long.\n"
                         printf "You should delete or move it and re-run this script, or generate another key by hand!\n"
@@ -159,6 +165,7 @@ ssh_client() {
                         printf "     ssh-keygen -t rsa -b 4096 -o -a 100\n"
                 fi
         fi
+        chown $(logname) $REALHOME/.ssh/id_rsa* $REALHOME/.ssh/id_ed25519*
 
         # Just printing some info for Solaris users.
 
