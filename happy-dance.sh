@@ -157,7 +157,7 @@ ssh_client() {
                         fi
 
                         exit;;
-                [Nn]* ) exit;; # This is what happens if you select no.
+                *) exit;; # This is what happens if you don't select yes
         esac
 }
 
@@ -270,7 +270,7 @@ ssh_server() {
                         3. Remove the line from the ~/.ssh/known_hosts file on your computer which corresponds to this server.
                         4. Try logging in. If it works, HAPPY DANCE!\n"
                         exit;;
-                [Nn]* ) exit;; # This is what happens if you select no.
+                *) exit;; # This is what happens if you don't select yes.
         esac
 }
 
