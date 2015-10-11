@@ -48,8 +48,9 @@
 # 1. Windows 10 support?
 ###
 
-# Just setting some variables before we started.
+set -eu
 
+# Just setting some variables before we start.
 HAPPYTMP="$(mktemp -d /tmp/HAPPY.XXXXXX)"
 trap 'rm -rf $HAPPYTMP' 0 1 2 15
 UNAME=`uname`
@@ -98,8 +99,8 @@ generate_host_ssh_keys() {
         ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
         ED25519_fingerprint="$(ssh-keygen -l -f ${ssh_path}/ssh_host_ed25519_key.pub 2> /dev/null)"
         RSA_fingerprint="$(ssh-keygen -l -f ${ssh_path}/ssh_host_rsa_key.pub)"
-        ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f ${ssh_path}/ssh_host_ed25519_key.pub 2> /dev/null)"
-        RSA_fingerprint_MD5="$(ssh-keygen -l -E md5 -f ${ssh_path}/ssh_host_rsa_key.pub 2> /dev/null)"
+        ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f ${ssh_path}/ssh_host_ed25519_key.pub 2> /dev/null || true)"
+        RSA_fingerprint_MD5="$(ssh-keygen -l -E md5 -f ${ssh_path}/ssh_host_rsa_key.pub 2> /dev/null || true)"
 }
 
 generate_moduli() {
