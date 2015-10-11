@@ -101,68 +101,66 @@ print_for_solaris_users() {
 }
 
 ssh_client() {
-        while true; do
-                if [ $UNAME = "OpenBSD" ] || [ $UNAME = "SunOS" ]; then # Needed for OpenBSD and Solaris support because the read command behaves differently on both.
-                        read yn?"This option replaces your ssh_config without backing up the original. Root or sudo access is requuired to do this. Are you sure you want to proceed? (y/n)"
-                else
-                        read -p "This option replaces your ssh_config without backing up the original. Root or sudo access is required to do this. Are you sure you want to proceed? (y/n)" yn
-                fi
-                case $yn in
-                        [Yy]* ) printf "Replacing your ssh client configuration file...\n"
-                                if [ -f /usr/local/etc/ssh/ssh_config ]; then
-                                        sudo cp etc/ssh/ssh_config /usr/local/etc/ssh/ssh_config
+        if [ $UNAME = "OpenBSD" ] || [ $UNAME = "SunOS" ]; then # Needed for OpenBSD and Solaris support because the read command behaves differently on both.
+                read yn?"This option replaces your ssh_config without backing up the original. Root or sudo access is requuired to do this. Are you sure you want to proceed? (y/n)"
+        else
+                read -p "This option replaces your ssh_config without backing up the original. Root or sudo access is required to do this. Are you sure you want to proceed? (y/n)" yn
+        fi
+        case $yn in
+                [Yy]* ) printf "Replacing your ssh client configuration file...\n"
+                        if [ -f /usr/local/etc/ssh/ssh_config ]; then
+                                sudo cp etc/ssh/ssh_config /usr/local/etc/ssh/ssh_config
+                        else
+                                sudo cp etc/ssh/ssh_config /etc/ssh/ssh_config # Removed $PWD
+                        fi
+
+                        # If you don't already have ssh keys, they will be generated for you.
+                        # If you do have keys, they won't be deleted, because that would be rude.
+
+                        if [ ! -f $HOME/.ssh/id_ed25519 ]; then
+                                ssh-keygen -t ed25519 -o -a 100
+                        else
+                                printf "You already have an ED25519 key!\n"
+                        fi
+
+                        if [ ! -f $HOME/.ssh/id_rsa ]; then
+                                ssh-keygen -t rsa -b 4096 -o -a 100
+                        else
+                                if [ "$KEYSIZE" -ge 4096 ]; then
+                                        printf "You already have an RSA key!\n"
                                 else
-                                        sudo cp etc/ssh/ssh_config /etc/ssh/ssh_config # Removed $PWD
+                                        printf "You already have an RSA key, but it's only $KEYSIZE bits long. You should delete or move it and re-run this script, or generate another key by hand! The command to generate your own RSA key pair is:\n\n"
+                                        printf "ssh-keygen -t rsa -b 4096 -o -a 100\n"
                                 fi
+                        fi
 
-                                # If you don't already have ssh keys, they will be generated for you.
-                                # If you do have keys, they won't be deleted, because that would be rude.
+                        # Just printing some info for Solaris users.
 
-                                if [ ! -f $HOME/.ssh/id_ed25519 ]; then
-                                        ssh-keygen -t ed25519 -o -a 100
+                        if [ $UNAME = "SunOS" ]; then
+                                print_for_solaris_users
+                        else
+                                exit;
+                        fi
+
+                        # This rather hackish check for OS X is only done so that the user's .bash_profile can be modified to make outgoing ssh connections work.
+
+                        if [ $UNAME = "Darwin" ]; then
+                                if grep -qFx "unset SSH_AUTH_SOCK" ~/.bash_profile; then # This just keeps the user from having SSH_AUTH_SOCK unset multiple times. It's a matter of config file cleanliness.
+                                        printf "Refusing to duplicate effort in your .bash_profile\n"
                                 else
-                                        printf "You already have an ED25519 key!\n"
+                                        printf "unset SSH_AUTH_SOCK\n" >> ~/.bash_profile
                                 fi
+                                printf "Since you use Mac OS X, you had to have a small modification to your .bash_profile in order to connect to remote hosts. Read here and follow the links to learn more: http:/serverfault.com/a/486048\n\n"
+                                printf "OpenSSH will work the next time you log in. If you want to use OPenSH imediately, run the following command in your terminal:\n"
+                                printf "unset SSH_SOCK_AUTH\n"
+                                printf "You only have to run that command once. That line is in your .bash_profile and will automatically make OpenSSH work for you on all future logins.\n"
+                        else
+                                exit;
+                        fi
 
-                                if [ ! -f $HOME/.ssh/id_rsa ]; then
-                                        ssh-keygen -t rsa -b 4096 -o -a 100
-                                else
-                                        if [ "$KEYSIZE" -ge 4096 ]; then
-                                                printf "You already have an RSA key!\n"
-                                        else
-                                                printf "You already have an RSA key, but it's only $KEYSIZE bits long. You should delete or move it and re-run this script, or generate another key by hand! The command to generate your own RSA key pair is:\n\n"
-                                                printf "ssh-keygen -t rsa -b 4096 -o -a 100\n"
-                                        fi
-                                fi
-
-                                # Just printing some info for Solaris users.
-
-                                if [ $UNAME = "SunOS" ]; then
-                                        print_for_solaris_users
-                                else
-                                        exit;
-                                fi
-
-                                # This rather hackish check for OS X is only done so that the user's .bash_profile can be modified to make outgoing ssh connections work.
-
-                                if [ $UNAME = "Darwin" ]; then
-                                        if grep -qFx "unset SSH_AUTH_SOCK" ~/.bash_profile; then # This just keeps the user from having SSH_AUTH_SOCK unset multiple times. It's a matter of config file cleanliness.
-                                                printf "Refusing to duplicate effort in your .bash_profile\n"
-                                        else
-                                                printf "unset SSH_AUTH_SOCK\n" >> ~/.bash_profile
-                                        fi
-                                        printf "Since you use Mac OS X, you had to have a small modification to your .bash_profile in order to connect to remote hosts. Read here and follow the links to learn more: http:/serverfault.com/a/486048\n\n"
-                                        printf "OpenSSH will work the next time you log in. If you want to use OPenSH imediately, run the following command in your terminal:\n"
-                                        printf "unset SSH_SOCK_AUTH\n"
-                                        printf "You only have to run that command once. That line is in your .bash_profile and will automatically make OpenSSH work for you on all future logins.\n"
-                                else
-                                        exit;
-                                fi
-
-                                exit;;
-                        [Nn]* ) exit;; # This is what happens if you select no.
-                esac
-        done
+                        exit;;
+                [Nn]* ) exit;; # This is what happens if you select no.
+        esac
 }
 
 # Meanwhile, the ssh_server function asks if you're sure you want to
@@ -173,113 +171,111 @@ ssh_client() {
 # the choice of passwording them has been removed from the user.
 
 ssh_server() {
-        while true; do
-                if [ $UNAME = "OpenBSD" ] || [ $UNAME = "SunOS" ]; then # Needed for OpenBSD and Solaris support because the read command behaves differently on both.
-                        read yn?"This option destroys all host keys and replaces your sshd_config file. Are you sure want to proceed? (y/n)"
-                else
-                        read -p "This option destroys all host keys and replaces your sshd_config file. Are you sure want to proceed? (y/n)" yn
-                fi
-                case $yn in
-                        [Yy]* ) printf "Replacing your ssh server configuration file...\n"
+        if [ $UNAME = "OpenBSD" ] || [ $UNAME = "SunOS" ]; then # Needed for OpenBSD and Solaris support because the read command behaves differently on both.
+                read yn?"This option destroys all host keys and replaces your sshd_config file. Are you sure want to proceed? (y/n)"
+        else
+                read -p "This option destroys all host keys and replaces your sshd_config file. Are you sure want to proceed? (y/n)" yn
+        fi
+        case $yn in
+                [Yy]* ) printf "Replacing your ssh server configuration file...\n"
 
-                                # Some platforms (Such as OpenBSD and NetBSD) store the moduli in /etc/moduli,
-                                # instead of /etc/ssh/moduli. I dislike nested ifs on principle, but this one
-                                # isn't too terrible.
+                        # Some platforms (Such as OpenBSD and NetBSD) store the moduli in /etc/moduli,
+                        # instead of /etc/ssh/moduli. I dislike nested ifs on principle, but this one
+                        # isn't too terrible.
 
-                                if [ ! -f /etc/ssh/moduli ]; then
-                                        if [ ! -f /etc/moduli ]; then
-                                                generate_moduli
-                                                sudo mv "${HOME}/moduli" /etc/ssh/moduli
-                                        else
-                                                printf "Modifying your /etc/moduli\n"
-                                                sudo awk '$5 > 2000' /etc/moduli > "${HOME}/moduli"
-                                                LINES=$(wc -l "${HOME}/moduli" | awk '{print $1}')
-                                                if [ $LINES -eq 0 ]; then
-                                                        generate_moduli
-                                                fi
-                                                sudo mv "${HOME}/moduli" /etc/moduli
-                                        fi
+                        if [ ! -f /etc/ssh/moduli ]; then
+                                if [ ! -f /etc/moduli ]; then
+                                        generate_moduli
+                                        sudo mv "${HOME}/moduli" /etc/ssh/moduli
                                 else
-                                        printf "Modifying your /etc/ssh/moduli\n"
-                                        sudo awk '$5 > 2000' /etc/ssh/moduli > "${HOME}/moduli"
+                                        printf "Modifying your /etc/moduli\n"
+                                        sudo awk '$5 > 2000' /etc/moduli > "${HOME}/moduli"
                                         LINES=$(wc -l "${HOME}/moduli" | awk '{print $1}')
                                         if [ $LINES -eq 0 ]; then
                                                 generate_moduli
                                         fi
-                                        sudo mv "${HOME}/moduli" /etc/ssh/moduli
+                                        sudo mv "${HOME}/moduli" /etc/moduli
                                 fi
-
-                                # Some platforms stuff the ssh config files under /usr/local, and this is also
-                                # the case if you've built your own ssh binary. So instead of doing $UNAME checks,
-                                # I just opted to check whether /usr/local/etc/ssh exists. I have yet to find a
-                                # scenario in which one of these two dir paths aren't used, so there is no
-                                # baked in error handling if /usr/local/etc/ssh and /etc/ssh don't exist.
-
-                                # As for what the branches in the if do, they each copy over the hardened config,
-                                # rm the host key files, generate new keys, then store those keys in variables
-                                # for printing later. You should always verify host key fingerprints,
-                                # and you are more likely to do it if this script makes it easy for you.
-                                # The variables are set up so that if you're using OpenSSH 6.5-6-7, the script
-                                # will print just the MD5 fingerprints. If you're using OpenSSH 6.8 and above,
-                                # it will print both the MD5 and SHA256 fingerprints. This means you can
-                                # easily verify the key fingerprints on your next login without having to
-                                # worry about your OpenSSH version.
-
-                                if [ -d /usr/local/etc/ssh ]; then
-                                        sudo cp etc/ssh/sshd_config /usr/local/etc/ssh/sshd_config
-                                        cd /usr/local/etc/ssh
-                                        sudo rm ssh_host_*key*
-                                        sudo ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
-                                        sudo ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
-                                        ED25519_fingerprint="$(ssh-keygen -l -f /usr/local/etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
-                                        RSA_fingerprint="$(ssh-keygen -l -f /usr/local/etc/ssh/ssh_host_rsa_key.pub)"
-                                        ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /usr/local/etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
-                                        RSA_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /usr/local/etc/ssh/ssh_host_rsa_key.pub 2> /dev/null)"
-                                else
-                                        sudo cp etc/ssh/sshd_config /etc/ssh/sshd_config
-                                        cd /etc/ssh
-                                        sudo rm ssh_host_*key*
-                                        sudo ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
-                                        sudo ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
-                                        ED25519_fingerprint="$(ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
-                                        RSA_fingerprint="$(ssh-keygen -l -f /etc/ssh/ssh_host_rsa_key.pub)"
-                                        ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
-                                        RSA_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /etc/ssh/ssh_host_rsa_key.pub 2> /dev/null)"
+                        else
+                                printf "Modifying your /etc/ssh/moduli\n"
+                                sudo awk '$5 > 2000' /etc/ssh/moduli > "${HOME}/moduli"
+                                LINES=$(wc -l "${HOME}/moduli" | awk '{print $1}')
+                                if [ $LINES -eq 0 ]; then
+                                        generate_moduli
                                 fi
+                                sudo mv "${HOME}/moduli" /etc/ssh/moduli
+                        fi
 
-                                # This next bit of code just prints the key fingerprints. if the *_MD5
-                                # variables contain anything at all, they will print. Otherwise, that's
-                                # 2 fewer lines printed in your terminal.
+                        # Some platforms stuff the ssh config files under /usr/local, and this is also
+                        # the case if you've built your own ssh binary. So instead of doing $UNAME checks,
+                        # I just opted to check whether /usr/local/etc/ssh exists. I have yet to find a
+                        # scenario in which one of these two dir paths aren't used, so there is no
+                        # baked in error handling if /usr/local/etc/ssh and /etc/ssh don't exist.
 
-                                printf "Your new host key fingerprints are:\n"
-                                printf "$ED25519_fingerprint\n" 2> /dev/null
-                                printf "$RSA_fingerprint\n"
-                                if [ -n "$ED25519_fingerprint_MD5" ]; then
-                                        printf "$ED25519_fingerprint_MD5\n" 2> /dev/null
-                                fi
+                        # As for what the branches in the if do, they each copy over the hardened config,
+                        # rm the host key files, generate new keys, then store those keys in variables
+                        # for printing later. You should always verify host key fingerprints,
+                        # and you are more likely to do it if this script makes it easy for you.
+                        # The variables are set up so that if you're using OpenSSH 6.5-6-7, the script
+                        # will print just the MD5 fingerprints. If you're using OpenSSH 6.8 and above,
+                        # it will print both the MD5 and SHA256 fingerprints. This means you can
+                        # easily verify the key fingerprints on your next login without having to
+                        # worry about your OpenSSH version.
 
-                                if [ -n "$RSA_fingerprint_MD5" ]; then
-                                        printf "$RSA_fingerprint_MD5\n"
-                                fi
-                                printf "Don't forget to verify these!\n"
+                        if [ -d /usr/local/etc/ssh ]; then
+                                sudo cp etc/ssh/sshd_config /usr/local/etc/ssh/sshd_config
+                                cd /usr/local/etc/ssh
+                                sudo rm ssh_host_*key*
+                                sudo ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
+                                sudo ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
+                                ED25519_fingerprint="$(ssh-keygen -l -f /usr/local/etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
+                                RSA_fingerprint="$(ssh-keygen -l -f /usr/local/etc/ssh/ssh_host_rsa_key.pub)"
+                                ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /usr/local/etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
+                                RSA_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /usr/local/etc/ssh/ssh_host_rsa_key.pub 2> /dev/null)"
+                        else
+                                sudo cp etc/ssh/sshd_config /etc/ssh/sshd_config
+                                cd /etc/ssh
+                                sudo rm ssh_host_*key*
+                                sudo ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
+                                sudo ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
+                                ED25519_fingerprint="$(ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
+                                RSA_fingerprint="$(ssh-keygen -l -f /etc/ssh/ssh_host_rsa_key.pub)"
+                                ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
+                                RSA_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /etc/ssh/ssh_host_rsa_key.pub 2> /dev/null)"
+                        fi
 
-                                if [ $UNAME = "SunOS" ]; then
-                                        print_for_solaris_users
-                                else
-                                        exit;
-                                fi
+                        # This next bit of code just prints the key fingerprints. if the *_MD5
+                        # variables contain anything at all, they will print. Otherwise, that's
+                        # 2 fewer lines printed in your terminal.
 
-                                # Just some final instructions. Nothing too fancy.
+                        printf "Your new host key fingerprints are:\n"
+                        printf "$ED25519_fingerprint\n" 2> /dev/null
+                        printf "$RSA_fingerprint\n"
+                        if [ -n "$ED25519_fingerprint_MD5" ]; then
+                                printf "$ED25519_fingerprint_MD5\n" 2> /dev/null
+                        fi
 
-                                printf "Without closing this ssh session, do the following:
-                                1. Add your public key to ~/.ssh/authorized_keys if it isn't there already
-                                2. Restart your sshd.
-                                3. Remove the line from the ~/.ssh/known_hosts file on your computer which corresponds to this server.
-                                4. Try logging in. If it works, HAPPY DANCE!\n"
-                                exit;;
-                        [Nn]* ) exit;; # This is what happens if you select no.
-                esac
-        done
+                        if [ -n "$RSA_fingerprint_MD5" ]; then
+                                printf "$RSA_fingerprint_MD5\n"
+                        fi
+                        printf "Don't forget to verify these!\n"
+
+                        if [ $UNAME = "SunOS" ]; then
+                                print_for_solaris_users
+                        else
+                                exit;
+                        fi
+
+                        # Just some final instructions. Nothing too fancy.
+
+                        printf "Without closing this ssh session, do the following:
+                        1. Add your public key to ~/.ssh/authorized_keys if it isn't there already
+                        2. Restart your sshd.
+                        3. Remove the line from the ~/.ssh/known_hosts file on your computer which corresponds to this server.
+                        4. Try logging in. If it works, HAPPY DANCE!\n"
+                        exit;;
+                [Nn]* ) exit;; # This is what happens if you select no.
+        esac
 }
 
 # This last bit of code just defines the flags.
