@@ -53,7 +53,7 @@ set -eu
 # Just setting some variables before we start.
 HAPPYTMP="$(mktemp -d /tmp/HAPPY.XXXXXX)"
 trap 'rm -rf $HAPPYTMP' 0 1 2 15
-UNAME=`uname`
+UNAME=$(uname -s)
 # Solaris 11.3's OpenSSH does not support ED25519 keys (Source:
 # https://twitter.com/darrenmoffat/status/641568090581528576), but does support
 # the option to use bcrypt to protect keys at rest. Since that option is
