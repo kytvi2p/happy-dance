@@ -53,7 +53,6 @@
 HAPPYTMP="$(mktemp -d /tmp/HAPPY.XXXXXX)"
 trap 'rm -rf $HAPPYTMP' 0 1 2 15
 UNAME=`uname`
-KEYSIZE=`test -r ~/.ssh/id_rsa.pub && ssh-keygen -l -f ~/.ssh/id_rsa.pub | awk '{print $1}'` # A special thanks to akhepcat for the suggestion to test -r first. It catches an edge case that may throw an error message for some clients.
 #VERSION=`ssh-keygen -t ed25519 -f /tmp/version.check -o -a 100 -q -N "" < /dev/null 2> /dev/null; echo $?` # Old version check.
 VERSION=`ssh-keygen -t rsa -f /tmp/version.check -o -a 100 -q -N "" < /dev/null 2> /dev/null; echo $?` # Solaris 11.3's OpenSSH do not support ED25519 keys (Source: https://twitter.com/darrenmoffat/status/641568090581528576), but do support the option to use bcrypt to protect keys at rest. Since that option is common to all newer implementations of OpenSSH, that's what will be used for the version check from now on.
 
@@ -143,20 +142,17 @@ ssh_client() {
         # If you don't already have ssh keys, they will be generated for you.
         # If you do have keys, they won't be deleted, because that would be rude.
 
-        if [ ! -f $HOME/.ssh/id_ed25519 ]; then
-                ssh-keygen -t ed25519 -o -a 100
-        else
-                printf "You already have an ED25519 key!\n"
-        fi
+        [ -f $HOME/.ssh/id_ed25519 ] || ssh-keygen -t ed25519 -o -a 100
 
         if [ ! -f $HOME/.ssh/id_rsa ]; then
                 ssh-keygen -t rsa -b 4096 -o -a 100
         else
-                if [ "$KEYSIZE" -ge 4096 ]; then
-                        printf "You already have an RSA key!\n"
-                else
-                        printf "You already have an RSA key, but it's only $KEYSIZE bits long. You should delete or move it and re-run this script, or generate another key by hand! The command to generate your own RSA key pair is:\n\n"
-                        printf "ssh-keygen -t rsa -b 4096 -o -a 100\n"
+                KEYSIZE=$(ssh-keygen -l -f ~/.ssh/id_rsa.pub | awk '{print $1}')
+                if [ "$KEYSIZE" -ne 4096 ]; then
+                        printf "You already have an RSA key but it's only $KEYSIZE bits long.\n"
+                        printf "You should delete or move it and re-run this script, or generate another key by hand!\n"
+                        printf "The command to generate your own RSA key pair is:\n\n"
+                        printf "     ssh-keygen -t rsa -b 4096 -o -a 100\n"
                 fi
         fi
 
