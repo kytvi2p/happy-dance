@@ -49,6 +49,9 @@
 ###
 
 set -eu
+# pretty colors
+echo_green() { printf "\033[0;32m$1\033[0;39;49m\n"; }
+echo_red() { printf "\033[0;31m$1\033[0;39;49m"; }
 
 # Just setting some variables before we start.
 HAPPYTMP="$(mktemp -d /tmp/HAPPY.XXXXXX)"
@@ -86,13 +89,13 @@ new ssh_config file.
 # test RSA key with the -o flag is the quickest and easiest way to do a version check.
 
 if [ $VERSION -gt 0 ]; then
-    printf "Your OpenSSH version is too old to run happy-dance. Upgrade to 6.5 or above.\n"
+    echo_red "Your OpenSSH version is too old to run happy-dance. Upgrade to 6.5 or above.\n"
     exit 1
 fi
 
 check_for_root() {
         if [ $(id -u) -ne 0 ]; then
-                printf "This script must be run as root.\n" 2>&1
+                echo_red "This script must be run as root.\n"
                 exit 1
         fi
 }
@@ -134,34 +137,35 @@ generate_moduli() {
                         moduli_path="$1"
                         ;;
         esac
-        printf "Your OS doesn't have an $moduli_path file, so we have to generate one. This might take a while.\n"
+        echo_red "Your OS doesn't have an $moduli_path file, so we have to generate one. This might take a while.\n"
         ssh-keygen -G "${HAPPYTMP}/moduli.all" -b 4096
         ssh-keygen -T "${moduli_path}" -f "${HAPPYTMP}/moduli.all"
 }
 
 modify_moduli() {
         moduli_path="$1"
-        printf "Modifying your $moduli_path\n"
+        echo_green "Modifying your $moduli_path\n"
         awk '$5 > 2000' "$moduli_path" > "${HAPPYTMP}/moduli"
         mv "${HAPPYTMP}/moduli" "$moduli_path"
 }
 
 print_for_solaris_users() {
-        printf "\nSolaris 11.2 and older users need to install OpenSSH from OpenCSW in order for happy-dance to work.\n"
-        printf "Solaris 11.3 users can get OpenSSH by running the following commands:\n"
-        printf "pkg uninstall ssh\n"
-        printf "pkg install openssh\n"
-        printf "You can verify the ssh version before and after by running 'pkg mediator ssh' and looking at the 'IMPLEMENTATION' column or by running 'ssh -V' and reading the output.\n\n"
+        echo_green "\nSolaris 11.2 and older users need to install OpenSSH from OpenCSW in order for happy-dance to work."
+        echo_green "Solaris 11.3 users can get OpenSSH by running the following commands:\n"
+        echo_red "pkg uninstall ssh\n"
+        echo_red "pkg install openssh\n"
+        echo_green "You can verify the ssh version before and after by running 'pkg mediator ssh'"
+        echo_green "and looking at the 'IMPLEMENTATION' column or by running 'ssh -V' and reading the output.\n"
 }
 
 # The ssh_client function takes the time to check for the existence of keys
 # because deleting or overwriting existing keys would be bad.
 ssh_client() {
-        printf "This option replaces your ssh_config without backing up the original.\n"
-        printf "Root or sudo access is requuired to do this. Are you sure you want to proceed? (y/n) "
+        echo_green "This option replaces your ssh_config without backing up the original.\n"
+        echo_red "Are you sure you want to proceed? (y/n) "
         read yn
         case $yn in
-                [Yy]*) printf "Replacing your ssh client configuration file...\n"
+                [Yy]*) echo_green "Replacing your ssh client configuration file..\n"
                         ;;
                 *)
                         exit
@@ -190,10 +194,10 @@ ssh_client() {
         else
                 KEYSIZE=$(ssh-keygen -l -f $REALHOME/.ssh/id_rsa.pub | awk '{print $1}')
                 if [ "$KEYSIZE" -ne 4096 ]; then
-                        printf "You already have an RSA key but it's only $KEYSIZE bits long.\n"
-                        printf "You should delete or move it and re-run this script, or generate another key by hand!\n"
-                        printf "The command to generate your own RSA key pair is:\n\n"
-                        printf "     ssh-keygen -t rsa -b 4096 -o -a 100\n"
+                        echo_red "You already have an RSA key but it's only $KEYSIZE bits long.\n"
+                        echo_red "You should delete or move it and re-run this script, or generate another key by hand!\n"
+                        echo_red "The command to generate your own RSA key pair is:\n"
+                        echo_red "     ssh-keygen -t rsa -b 4096 -o -a 100\n"
                 fi
         fi
         chown $(logname) $REALHOME/.ssh/id_rsa* $REALHOME/.ssh/id_ed25519*
@@ -210,15 +214,15 @@ ssh_client() {
                         # This just keeps the user from having SSH_AUTH_SOCK
                         # unset multiple times. It's a matter of config file
                         # cleanliness.
-                        printf "Refusing to duplicate effort in your .bash_profile\n"
+                        echo_red "Refusing to duplicate effort in your .bash_profile\n"
                 else
                         printf "unset SSH_AUTH_SOCK\n" >> ~/.bash_profile
                 fi
-                printf "Since you use Mac OS X, you had to have a small modification to your .bash_profile\n"
-                printf "in order to connect to remote hosts. Read here and follow the links to learn more: http:/serverfault.com/a/486048\n\n"
-                printf "OpenSSH will work the next time you log in. If you want to use OpenSSH imediately, run the following command in your terminal:\n"
-                printf "unset SSH_SOCK_AUTH\n"
-                printf "You only have to run that command once. That line is in your .bash_profile\n and will automatically make OpenSSH work for you on all future logins.\n"
+                echo_green "Since you use Mac OS X, you had to have a small modification to your .bash_profile"
+                echo_green "in order to connect to remote hosts. Read here and follow the links to learn more: http:/serverfault.com/a/486048\n"
+                echo_green "OpenSSH will work the next time you log in. If you want to use OpenSSH imediately, run the following command in your terminal:"
+                echo_green "unset SSH_SOCK_AUTH"
+                echo_green "You only have to run that command once. That line is in your .bash_profile\n and will automatically make OpenSSH work for you on all future logins.\n"
         fi
         exit 0
 }
@@ -231,11 +235,11 @@ ssh_client() {
 # the choice of passwording them has been removed from the user.
 
 ssh_server() {
-        printf "This option destroys all host keys and replaces your sshd_config file.\n"
-        printf "Are you sure want to proceed? (y/n) "
+        echo_green "This option destroys all host keys and replaces your sshd_config file."
+        echo_red "Are you sure want to proceed? (y/n) "
         read yn
         case $yn in
-                [Yy]*) printf "Replacing your ssh server configuration file...\n"
+                [Yy]*) echo_green "Replacing your ssh server configuration file.."
                         ;;
                 *)
                         exit
@@ -283,7 +287,7 @@ ssh_server() {
         # variables contain anything at all, they will print. Otherwise, that's
         # 2 fewer lines printed in your terminal.
 
-        printf "Your new host key fingerprints are:\n"
+        echo_green "Your new host key fingerprints are:"
         printf "$ED25519_fingerprint\n" 2> /dev/null
         printf "$RSA_fingerprint\n"
         if [ -n "$ED25519_fingerprint_MD5" ]; then
@@ -293,12 +297,12 @@ ssh_server() {
         if [ -n "$RSA_fingerprint_MD5" ]; then
                 printf "$RSA_fingerprint_MD5\n"
         fi
-        printf "Don't forget to verify these!\n"
+        echo_green "Don't forget to verify these!\n"
 
         if [ $UNAME = "SunOS" ]; then
                 print_for_solaris_users
         else
-                printf "Without closing this ssh session, do the following:
+                echo_green "Without closing this ssh session, do the following:
                 1. Add your public key to ~/.ssh/authorized_keys if it isn't there already
                 2. Restart your sshd.
                 3. Remove the line from the ~/.ssh/known_hosts file on your computer which corresponds to this server.
