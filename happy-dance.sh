@@ -101,11 +101,9 @@ print_for_solaris_users() {
 }
 
 ssh_client() {
-        if [ $UNAME = "OpenBSD" ] || [ $UNAME = "SunOS" ]; then # Needed for OpenBSD and Solaris support because the read command behaves differently on both.
-                read yn?"This option replaces your ssh_config without backing up the original. Root or sudo access is requuired to do this. Are you sure you want to proceed? (y/n)"
-        else
-                read -p "This option replaces your ssh_config without backing up the original. Root or sudo access is required to do this. Are you sure you want to proceed? (y/n)" yn
-        fi
+        printf "This option replaces your ssh_config without backing up the original.\n"
+        printf "Root or sudo access is requuired to do this. Are you sure you want to proceed? (y/n) "
+        read yn
         case $yn in
                 [Yy]* ) printf "Replacing your ssh client configuration file...\n"
                         if [ -f /usr/local/etc/ssh/ssh_config ]; then
@@ -171,11 +169,9 @@ ssh_client() {
 # the choice of passwording them has been removed from the user.
 
 ssh_server() {
-        if [ $UNAME = "OpenBSD" ] || [ $UNAME = "SunOS" ]; then # Needed for OpenBSD and Solaris support because the read command behaves differently on both.
-                read yn?"This option destroys all host keys and replaces your sshd_config file. Are you sure want to proceed? (y/n)"
-        else
-                read -p "This option destroys all host keys and replaces your sshd_config file. Are you sure want to proceed? (y/n)" yn
-        fi
+        printf "This option destroys all host keys and replaces your sshd_config file.\n"
+        printf "Are you sure want to proceed? (y/n) "
+        read yn
         case $yn in
                 [Yy]* ) printf "Replacing your ssh server configuration file...\n"
 
