@@ -90,6 +90,13 @@ if [ $VERSION -gt 0 ]; then
     exit 1
 fi
 
+check_for_root() {
+        if [ $(id -u) -ne 0 ]; then
+                printf "This script must be run as root.\n" 2>&1
+                exit 1
+        fi
+}
+
 generate_host_ssh_keys() {
         ssh_path="$1"
         cp etc/ssh/sshd_config "${ssh_path}/sshd_config"
@@ -282,11 +289,11 @@ while getopts "cs" opt; do
     case $opt in
 
         c)
-            ssh_client
+            check_for_root && ssh_client
         ;;
 
         s)
-            ssh_server
+            check_for_root && ssh_server
         ;;
     esac
 done
