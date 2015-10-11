@@ -126,7 +126,14 @@ generate_host_ssh_keys() {
 }
 
 generate_moduli() {
-        moduli_path="$1"
+        case $UNAME in
+                OpenBSD|NetBSD)
+                        moduli_path="/etc/moduli"
+                        ;;
+                *)
+                        moduli_path="$1"
+                        ;;
+        esac
         printf "Your OS doesn't have an $moduli_path file, so we have to generate one. This might take a while.\n"
         ssh-keygen -G "${HAPPYTMP}/moduli.all" -b 4096
         ssh-keygen -T "${moduli_path}" -f "${HAPPYTMP}/moduli.all"
