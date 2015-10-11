@@ -195,75 +195,74 @@ ssh_server() {
         printf "Are you sure want to proceed? (y/n) "
         read yn
         case $yn in
-                [Yy]* ) printf "Replacing your ssh server configuration file...\n"
-
-                        # Some platforms (Such as OpenBSD and NetBSD) store the moduli in /etc/moduli,
-                        # instead of /etc/ssh/moduli.
-
-                        if [ -s /etc/ssh/moduli ]; then
-                                modify_moduli /etc/ssh/moduli
-                        elif [ -s /etc/moduli ]; then
-                                modify_moduli /etc/moduli
-                        elif [ -d /etc/ssh ]; then
-                                generate_moduli /etc/ssh/moduli
-                        else
-                                generate_moduli /etc/moduli
-                        fi
-
-                        # Some platforms stuff the ssh config files under /usr/local, and this is also
-                        # the case if you've built your own ssh binary. So instead of doing $UNAME checks,
-                        # I just opted to check whether /usr/local/etc/ssh exists. I have yet to find a
-                        # scenario in which one of these two dir paths aren't used, so there is no
-                        # baked in error handling if /usr/local/etc/ssh and /etc/ssh don't exist.
-
-                        # As for what the branches in the if do, they each copy over the hardened config,
-                        # rm the host key files, generate new keys, then store those keys in variables
-                        # for printing later. You should always verify host key fingerprints,
-                        # and you are more likely to do it if this script makes it easy for you.
-                        # The variables are set up so that if you're using OpenSSH 6.5-6-7, the script
-                        # will print just the MD5 fingerprints. If you're using OpenSSH 6.8 and above,
-                        # it will print both the MD5 and SHA256 fingerprints. This means you can
-                        # easily verify the key fingerprints on your next login without having to
-                        # worry about your OpenSSH version.
-
-                        if [ -d /usr/local/etc/ssh ]; then
-                                generate_host_ssh_keys "/usr/local/etc/ssh"
-                        else
-                                generate_host_ssh_keys "/etc/ssh"
-                        fi
-
-                        # This next bit of code just prints the key fingerprints. if the *_MD5
-                        # variables contain anything at all, they will print. Otherwise, that's
-                        # 2 fewer lines printed in your terminal.
-
-                        printf "Your new host key fingerprints are:\n"
-                        printf "$ED25519_fingerprint\n" 2> /dev/null
-                        printf "$RSA_fingerprint\n"
-                        if [ -n "$ED25519_fingerprint_MD5" ]; then
-                                printf "$ED25519_fingerprint_MD5\n" 2> /dev/null
-                        fi
-
-                        if [ -n "$RSA_fingerprint_MD5" ]; then
-                                printf "$RSA_fingerprint_MD5\n"
-                        fi
-                        printf "Don't forget to verify these!\n"
-
-                        if [ $UNAME = "SunOS" ]; then
-                                print_for_solaris_users
-                        else
-                                exit;
-                        fi
-
-                        # Just some final instructions. Nothing too fancy.
-
-                        printf "Without closing this ssh session, do the following:
-                        1. Add your public key to ~/.ssh/authorized_keys if it isn't there already
-                        2. Restart your sshd.
-                        3. Remove the line from the ~/.ssh/known_hosts file on your computer which corresponds to this server.
-                        4. Try logging in. If it works, HAPPY DANCE!\n"
-                        exit;;
-                *) exit;; # This is what happens if you don't select yes.
+                [Yy]*) printf "Replacing your ssh server configuration file...\n"
+                        ;;
+                *)
+                        exit
+                        ;;
         esac
+
+        # Some platforms (Such as OpenBSD and NetBSD) store the moduli in /etc/moduli,
+        # instead of /etc/ssh/moduli.
+
+        if [ -s /etc/ssh/moduli ]; then
+                modify_moduli /etc/ssh/moduli
+        elif [ -s /etc/moduli ]; then
+                modify_moduli /etc/moduli
+        elif [ -d /etc/ssh ]; then
+                generate_moduli /etc/ssh/moduli
+        else
+                generate_moduli /etc/moduli
+        fi
+
+        # Some platforms stuff the ssh config files under /usr/local, and this is also
+        # the case if you've built your own ssh binary. So instead of doing $UNAME checks,
+        # I just opted to check whether /usr/local/etc/ssh exists. I have yet to find a
+        # scenario in which one of these two dir paths aren't used, so there is no
+        # baked in error handling if /usr/local/etc/ssh and /etc/ssh don't exist.
+
+        # As for what the branches in the if do, they each copy over the hardened config,
+        # rm the host key files, generate new keys, then store those keys in variables
+        # for printing later. You should always verify host key fingerprints,
+        # and you are more likely to do it if this script makes it easy for you.
+        # The variables are set up so that if you're using OpenSSH 6.5-6-7, the script
+        # will print just the MD5 fingerprints. If you're using OpenSSH 6.8 and above,
+        # it will print both the MD5 and SHA256 fingerprints. This means you can
+        # easily verify the key fingerprints on your next login without having to
+        # worry about your OpenSSH version.
+
+        if [ -d /usr/local/etc/ssh ]; then
+                generate_host_ssh_keys "/usr/local/etc/ssh"
+        else
+                generate_host_ssh_keys "/etc/ssh"
+        fi
+
+        # This next bit of code just prints the key fingerprints. if the *_MD5
+        # variables contain anything at all, they will print. Otherwise, that's
+        # 2 fewer lines printed in your terminal.
+
+        printf "Your new host key fingerprints are:\n"
+        printf "$ED25519_fingerprint\n" 2> /dev/null
+        printf "$RSA_fingerprint\n"
+        if [ -n "$ED25519_fingerprint_MD5" ]; then
+                printf "$ED25519_fingerprint_MD5\n" 2> /dev/null
+        fi
+
+        if [ -n "$RSA_fingerprint_MD5" ]; then
+                printf "$RSA_fingerprint_MD5\n"
+        fi
+        printf "Don't forget to verify these!\n"
+
+        if [ $UNAME = "SunOS" ]; then
+                print_for_solaris_users
+        else
+                printf "Without closing this ssh session, do the following:
+                1. Add your public key to ~/.ssh/authorized_keys if it isn't there already
+                2. Restart your sshd.
+                3. Remove the line from the ~/.ssh/known_hosts file on your computer which corresponds to this server.
+                4. Try logging in. If it works, HAPPY DANCE!\n"
+        fi
+        exit
 }
 
 # This last bit of code just defines the flags.
