@@ -50,6 +50,8 @@
 
 # Just setting some variables before we started.
 
+HAPPYTMP="$(mktemp -d /tmp/HAPPY.XXXXXX)"
+trap 'rm -rf $HAPPYTMP' 0 1 2 15
 UNAME=`uname`
 KEYSIZE=`test -r ~/.ssh/id_rsa.pub && ssh-keygen -l -f ~/.ssh/id_rsa.pub | awk '{print $1}'` # A special thanks to akhepcat for the suggestion to test -r first. It catches an edge case that may throw an error message for some clients.
 #VERSION=`ssh-keygen -t ed25519 -f /tmp/version.check -o -a 100 -q -N "" < /dev/null 2> /dev/null; echo $?` # Old version check.
@@ -83,10 +85,17 @@ fi
 rm -rf /tmp/version.check* # Just doing some house keeping.
 
 generate_moduli() {
-        printf "Your OS doesn't have an /etc/ssh/moduli file, so we have to generate one. This might take a while.\n"
-        ssh-keygen -G "${HOME}/moduli.all" -b 4096
-        ssh-keygen -T "${HOME}/moduli" -f "${HOME}/moduli.all"
-        rm "${HOME}/moduli.all"
+        moduli_path="$1"
+        printf "Your OS doesn't have an $moduli_path file, so we have to generate one. This might take a while.\n"
+        ssh-keygen -G "${HAPPYTMP}/moduli.all" -b 4096
+        ssh-keygen -T "${moduli_path}" -f "${HAPPYTMP}/moduli.all"
+}
+
+modify_moduli() {
+        moduli_path="$1"
+        printf "Modifying your $moduli_path\n"
+        awk '$5 > 2000' "$moduli_path" > "${HAPPYTMP}/moduli"
+        mv "${HAPPYTMP}/moduli" "$moduli_path"
 }
 
 # The ssh_client function takes the time to check for the existence of keys
@@ -176,30 +185,16 @@ ssh_server() {
                 [Yy]* ) printf "Replacing your ssh server configuration file...\n"
 
                         # Some platforms (Such as OpenBSD and NetBSD) store the moduli in /etc/moduli,
-                        # instead of /etc/ssh/moduli. I dislike nested ifs on principle, but this one
-                        # isn't too terrible.
+                        # instead of /etc/ssh/moduli.
 
-                        if [ ! -f /etc/ssh/moduli ]; then
-                                if [ ! -f /etc/moduli ]; then
-                                        generate_moduli
-                                        mv "${HOME}/moduli" /etc/ssh/moduli
-                                else
-                                        printf "Modifying your /etc/moduli\n"
-                                        awk '$5 > 2000' /etc/moduli > "${HOME}/moduli"
-                                        LINES=$(wc -l "${HOME}/moduli" | awk '{print $1}')
-                                        if [ $LINES -eq 0 ]; then
-                                                generate_moduli
-                                        fi
-                                        mv "${HOME}/moduli" /etc/moduli
-                                fi
+                        if [ -s /etc/ssh/moduli ]; then
+                                modify_moduli /etc/ssh/moduli
+                        elif [ -s /etc/moduli ]; then
+                                modify_moduli /etc/moduli
+                        elif [ -d /etc/ssh ]; then
+                                generate_moduli /etc/ssh/moduli
                         else
-                                printf "Modifying your /etc/ssh/moduli\n"
-                                awk '$5 > 2000' /etc/ssh/moduli > "${HOME}/moduli"
-                                LINES=$(wc -l "${HOME}/moduli" | awk '{print $1}')
-                                if [ $LINES -eq 0 ]; then
-                                        generate_moduli
-                                fi
-                                mv "${HOME}/moduli" /etc/ssh/moduli
+                                generate_moduli /etc/moduli
                         fi
 
                         # Some platforms stuff the ssh config files under /usr/local, and this is also
