@@ -53,8 +53,12 @@
 HAPPYTMP="$(mktemp -d /tmp/HAPPY.XXXXXX)"
 trap 'rm -rf $HAPPYTMP' 0 1 2 15
 UNAME=`uname`
-#VERSION=`ssh-keygen -t ed25519 -f /tmp/version.check -o -a 100 -q -N "" < /dev/null 2> /dev/null; echo $?` # Old version check.
-VERSION=`ssh-keygen -t rsa -f /tmp/version.check -o -a 100 -q -N "" < /dev/null 2> /dev/null; echo $?` # Solaris 11.3's OpenSSH do not support ED25519 keys (Source: https://twitter.com/darrenmoffat/status/641568090581528576), but do support the option to use bcrypt to protect keys at rest. Since that option is common to all newer implementations of OpenSSH, that's what will be used for the version check from now on.
+# Solaris 11.3's OpenSSH does not support ED25519 keys (Source:
+# https://twitter.com/darrenmoffat/status/641568090581528576), but does support
+# the option to use bcrypt to protect keys at rest. Since that option is
+# common to all newer implementations of OpenSSH, that's what will be used for
+# the version check from now on.
+VERSION=`ssh-keygen -t rsa -f "${HAPPYTMP}/version.check" -o -a 100 -q -N "" < /dev/null 2> /dev/null; echo $?`
 
 # What follows is just some introductory text.
 help() {
@@ -84,8 +88,6 @@ if [ $VERSION -gt 0 ]; then
     printf "Your OpenSSH version is too old to run happy-dance. Upgrade to 6.5 or above.\n"
     exit 1
 fi
-
-rm -rf /tmp/version.check* # Just doing some house keeping.
 
 generate_host_ssh_keys() {
         ssh_path="$1"
