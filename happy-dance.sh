@@ -84,9 +84,9 @@ rm -rf /tmp/version.check* # Just doing some house keeping.
 
 generate_moduli() {
         printf "Your OS doesn't have an /etc/ssh/moduli file, so we have to generate one. This might take a while.\n"
-        sudo ssh-keygen -G "${HOME}/moduli.all" -b 4096
-        sudo ssh-keygen -T "${HOME}/moduli" -f "${HOME}/moduli.all"
-        sudo rm "${HOME}/moduli.all"
+        ssh-keygen -G "${HOME}/moduli.all" -b 4096
+        ssh-keygen -T "${HOME}/moduli" -f "${HOME}/moduli.all"
+        rm "${HOME}/moduli.all"
 }
 
 # The ssh_client function takes the time to check for the existence of keys
@@ -107,9 +107,9 @@ ssh_client() {
         case $yn in
                 [Yy]* ) printf "Replacing your ssh client configuration file...\n"
                         if [ -f /usr/local/etc/ssh/ssh_config ]; then
-                                sudo cp etc/ssh/ssh_config /usr/local/etc/ssh/ssh_config
+                                cp etc/ssh/ssh_config /usr/local/etc/ssh/ssh_config
                         else
-                                sudo cp etc/ssh/ssh_config /etc/ssh/ssh_config # Removed $PWD
+                                cp etc/ssh/ssh_config /etc/ssh/ssh_config # Removed $PWD
                         fi
 
                         # If you don't already have ssh keys, they will be generated for you.
@@ -182,24 +182,24 @@ ssh_server() {
                         if [ ! -f /etc/ssh/moduli ]; then
                                 if [ ! -f /etc/moduli ]; then
                                         generate_moduli
-                                        sudo mv "${HOME}/moduli" /etc/ssh/moduli
+                                        mv "${HOME}/moduli" /etc/ssh/moduli
                                 else
                                         printf "Modifying your /etc/moduli\n"
-                                        sudo awk '$5 > 2000' /etc/moduli > "${HOME}/moduli"
+                                        awk '$5 > 2000' /etc/moduli > "${HOME}/moduli"
                                         LINES=$(wc -l "${HOME}/moduli" | awk '{print $1}')
                                         if [ $LINES -eq 0 ]; then
                                                 generate_moduli
                                         fi
-                                        sudo mv "${HOME}/moduli" /etc/moduli
+                                        mv "${HOME}/moduli" /etc/moduli
                                 fi
                         else
                                 printf "Modifying your /etc/ssh/moduli\n"
-                                sudo awk '$5 > 2000' /etc/ssh/moduli > "${HOME}/moduli"
+                                awk '$5 > 2000' /etc/ssh/moduli > "${HOME}/moduli"
                                 LINES=$(wc -l "${HOME}/moduli" | awk '{print $1}')
                                 if [ $LINES -eq 0 ]; then
                                         generate_moduli
                                 fi
-                                sudo mv "${HOME}/moduli" /etc/ssh/moduli
+                                mv "${HOME}/moduli" /etc/ssh/moduli
                         fi
 
                         # Some platforms stuff the ssh config files under /usr/local, and this is also
@@ -219,21 +219,21 @@ ssh_server() {
                         # worry about your OpenSSH version.
 
                         if [ -d /usr/local/etc/ssh ]; then
-                                sudo cp etc/ssh/sshd_config /usr/local/etc/ssh/sshd_config
+                                cp etc/ssh/sshd_config /usr/local/etc/ssh/sshd_config
                                 cd /usr/local/etc/ssh
-                                sudo rm ssh_host_*key*
-                                sudo ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
-                                sudo ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
+                                rm ssh_host_*key*
+                                ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
+                                ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
                                 ED25519_fingerprint="$(ssh-keygen -l -f /usr/local/etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
                                 RSA_fingerprint="$(ssh-keygen -l -f /usr/local/etc/ssh/ssh_host_rsa_key.pub)"
                                 ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /usr/local/etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
                                 RSA_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /usr/local/etc/ssh/ssh_host_rsa_key.pub 2> /dev/null)"
                         else
-                                sudo cp etc/ssh/sshd_config /etc/ssh/sshd_config
+                                cp etc/ssh/sshd_config /etc/ssh/sshd_config
                                 cd /etc/ssh
-                                sudo rm ssh_host_*key*
-                                sudo ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
-                                sudo ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
+                                rm ssh_host_*key*
+                                ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
+                                ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
                                 ED25519_fingerprint="$(ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
                                 RSA_fingerprint="$(ssh-keygen -l -f /etc/ssh/ssh_host_rsa_key.pub)"
                                 ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f /etc/ssh/ssh_host_ed25519_key.pub 2> /dev/null)"
