@@ -19,7 +19,7 @@
 # - Solaris 11.2 with CSWOpenSSH and 11.3 Beta with OpenSSH from the package manager
 
 # Notes:
-# 1. OpenBSD/NetBSD users: /etc/moduli is the same as /etc/moduli on other
+# 1. OpenBSD/NetBSD users: /etc/moduli is the same as /etc/ssh/moduli on other
 # platforms. You don't have to do anything extra to make the script work.
 # Also, SHA256 fingerprints are now a thing for you.
 #
