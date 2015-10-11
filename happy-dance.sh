@@ -97,6 +97,21 @@ check_for_root() {
         fi
 }
 
+freebsd_disable_insecure_key_types() {
+        local insecure='
+                sshd_rsa1_enable
+                sshd_dsa_enable
+                sshd_ecdsa_enable
+                '
+        for each in $insecure; do
+                if grep -q $each /etc/rc.conf; then
+                        sed -I.bak "s/\($each\).*/\1=\"no\"/" /etc/rc.conf
+                else
+                        printf "%s=\"no\"\n" $each >> /etc/rc.conf
+                fi
+        done
+}
+
 generate_host_ssh_keys() {
         ssh_path="$1"
         cp etc/ssh/sshd_config "${ssh_path}/sshd_config"
@@ -124,9 +139,6 @@ modify_moduli() {
         mv "${HAPPYTMP}/moduli" "$moduli_path"
 }
 
-# The ssh_client function takes the time to check for the existence of keys
-# because deleting or overwriting existing keys would be bad.
-
 print_for_solaris_users() {
         printf "\nSolaris 11.2 and older users need to install OpenSSH from OpenCSW in order for happy-dance to work.\n"
         printf "Solaris 11.3 users can get OpenSSH by running the following commands:\n"
@@ -135,6 +147,8 @@ print_for_solaris_users() {
         printf "You can verify the ssh version before and after by running 'pkg mediator ssh' and looking at the 'IMPLEMENTATION' column or by running 'ssh -V' and reading the output.\n\n"
 }
 
+# The ssh_client function takes the time to check for the existence of keys
+# because deleting or overwriting existing keys would be bad.
 ssh_client() {
         printf "This option replaces your ssh_config without backing up the original.\n"
         printf "Root or sudo access is requuired to do this. Are you sure you want to proceed? (y/n) "
@@ -255,6 +269,8 @@ ssh_server() {
         else
                 generate_host_ssh_keys "/etc/ssh"
         fi
+
+       [ $UNAME = 'FreeBSD' ] && freebsd_disable_insecure_key_types
 
         # This next bit of code just prints the key fingerprints. if the *_MD5
         # variables contain anything at all, they will print. Otherwise, that's
