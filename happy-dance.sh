@@ -155,7 +155,7 @@ modify_sshd_config() {
         cp "${sshd_config}" "${sshd_config}.bak"
 
         # Remove weak keys from the config file
-        sed -i -e 's;^\(Host.*dsa.*\|Host.*host_key$\);#\1;' "${sshd_config}"
+        sed_i 's;^\(Host.*dsa.*\|Host.*host_key$\);#\1;' "${sshd_config}"
 
         # Add keys if missing from the config file
         if ! grep -q '^HostKey.*ed25519_key$' "${sshd_config}"; then
@@ -166,19 +166,19 @@ modify_sshd_config() {
         fi
 
         if grep -q '^MACs' "${sshd_config}"; then
-                sed -i -e "s/^\(MACs.*\)/MACs $MACs/" ${sshd_config}
+                sed_i "s/^\(MACs.*\)/MACs $MACs/" "${sshd_config}"
         else
                 printf "MACs %s\n" $MACs >> "${sshd_config}"
         fi
 
         if grep -q '^Ciphers' "${sshd_config}"; then
-                sed -i -e "s/^\(Ciphers.*\)/Ciphers $Ciphers/" ${sshd_config}
+                sed_i "s/^\(Ciphers.*\)/Ciphers $Ciphers/" "${sshd_config}"
         else
                 printf "Ciphers %s\n" $Ciphers >> "${sshd_config}"
         fi
 
         if grep -q '^KexAlgorithms' "${sshd_config}"; then
-                sed -i -e "s/^\(KexAlgorithms.*\)/KexAlgorithms $KexAlgorithms/" ${sshd_config}
+                sed_i "s/^\(KexAlgorithms.*\)/KexAlgorithms $KexAlgorithms/" "${sshd_config}"
         else
                 printf "KexAlgorithms %s\n" $KexAlgorithms >> "${sshd_config}"
         fi
@@ -200,6 +200,13 @@ print_for_solaris_users() {
         echo_green "You can verify the ssh version before and after by running 'pkg mediator ssh'"
         echo_green "and looking at the 'IMPLEMENTATION' column or by running 'ssh -V' and reading the output.\n"
 }
+
+sed_i() {
+        # Even in the year 2015 not all versions of sed support in-line editing :/
+        sed -e "${1}" "${2}" > $HAPPYTMP/sed.out
+        mv "$HAPPYTMP/sed.out" "$2"
+}
+
 
 # The ssh_client function takes the time to check for the existence of keys
 # because deleting or overwriting existing keys would be bad.
