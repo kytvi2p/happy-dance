@@ -108,9 +108,9 @@ freebsd_disable_insecure_key_types() {
                 '
         for each in $insecure; do
                 if grep -q $each /etc/rc.conf; then
-                        sed -I.bak "s/\($each\).*/\1=\"no\"/" /etc/rc.conf
+                        sed -I.bak "s/\($each\).*/\1=\"NO\"/" /etc/rc.conf
                 else
-                        printf "%s=\"no\"\n" $each >> /etc/rc.conf
+                        printf "%s=\"NO\"\n" $each >> /etc/rc.conf
                 fi
         done
 }
