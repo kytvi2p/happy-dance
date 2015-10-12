@@ -68,6 +68,7 @@ VERSION=`ssh-keygen -t rsa -f "${HAPPYTMP}/version.check" -o -a 100 -q -N "" < /
 MACs="hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-ripemd160-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,hmac-ripemd160,umac-128@openssh.com"
 KexAlgorithms="curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256"
 Ciphers="chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr"
+HostKeyAlgorithms="ssh-ed25519-cert-v01@openssh.com,ssh-rsa-cert-v01@openssh.com,ssh-ed25519,ssh-rsa"
 
 # What follows is just some introductory text.
 help() {
@@ -147,6 +148,59 @@ generate_moduli() {
         ssh-keygen -T "${moduli_path}" -f "${HAPPYTMP}/moduli.all"
 }
 
+modify_ssh_config() {
+        ssh_path="$1"
+        ssh_config="${ssh_path}/ssh_config"
+
+        # Backup before changing anything
+        cp "${ssh_config}" "${ssh_config}.bak"
+
+        if ! grep -q '^Host *' "${ssh_config}"; then
+                printf 'Host *\n' >> "${ssh_config}"
+        fi
+
+        if grep -Eq '^.*ChallengeResponseAuthentication' ${ssh_config}; then
+                sed_i 's/^.*\(ChallengeResponseAuthentication\).*/     \1 no/' "${ssh_config}"
+        else
+                printf '     ChallengeResponseAuthentication no\n' >> "${ssh_config}"
+        fi
+
+        if grep -Eq '^.*PasswordAuthentication' ${ssh_config}; then
+                sed_i 's/^.*\(PasswordAuthentication\).*/     \1 no/' "${ssh_config}"
+        else
+                printf '     PasswordAuthentication no\n' >> "${ssh_config}"
+        fi
+
+        if grep -Eq '^.*PubkeyAuthentication' ${ssh_config}; then
+                sed_i 's/^.*\(PubkeyAuthentication\).*/     \1 yes/' "${ssh_config}"
+        else
+                printf '     PubkeyAuthentication yes\n' >> "${ssh_config}"
+        fi
+
+        if grep -Eq '^.*MACs' "${ssh_config}"; then
+                sed_i "s/^.*\(MACs.*\)/     MACs $MACs/" "${ssh_config}"
+        else
+                printf "     MACs %s\n" $MACs >> "${ssh_config}"
+        fi
+
+        if grep -Eq '^.*Ciphers' "${ssh_config}"; then
+                sed_i "s/^.*\(Ciphers.*\)/     Ciphers $Ciphers/" "${ssh_config}"
+        else
+                printf "     Ciphers %s\n" $Ciphers >> "${ssh_config}"
+        fi
+
+        if grep -q '^.*HostKeyAlgorithms' "${ssh_config}"; then
+                sed_i "s/^.*\(HostKeyAlgorithms.*\)/     HostKeyAlgorithms $HostKeyAlgorithms/" "${ssh_config}"
+        else
+                printf "     HostKeyAlgorithms %s\n" $HostKeyAlgorithms >> "${ssh_config}"
+        fi
+
+        if grep -q '^.*KexAlgorithms' "${ssh_config}"; then
+                sed_i "s/^.*\(KexAlgorithms.*\)/     KexAlgorithms $KexAlgorithms/" "${ssh_config}"
+        else
+                printf "     KexAlgorithms %s\n" $KexAlgorithms >> "${ssh_config}"
+        fi
+}
 modify_sshd_config() {
         ssh_path="$1"
         sshd_config="${ssh_path}/sshd_config"
@@ -211,11 +265,11 @@ sed_i() {
 # The ssh_client function takes the time to check for the existence of keys
 # because deleting or overwriting existing keys would be bad.
 ssh_client() {
-        echo_green "This option replaces your ssh_config without backing up the original.\n"
+        echo_green "This option updates your ssh_config after backing up the original.\n"
         echo_red "Are you sure you want to proceed? (y/n) "
         read yn
         case $yn in
-                [Yy]*) echo_green "Replacing your ssh client configuration file..\n"
+                [Yy]*) echo_green "Updating your ssh client configuration file..\n"
                         ;;
                 *)
                         exit
@@ -223,9 +277,9 @@ ssh_client() {
         esac
 
         if [ -f /usr/local/etc/ssh/ssh_config ]; then
-                cp etc/ssh/ssh_config /usr/local/etc/ssh/ssh_config
+                modify_ssh_config /usr/local/etc/ssh
         else
-                cp etc/ssh/ssh_config /etc/ssh/ssh_config # Removed $PWD
+                modify_ssh_config /etc/ssh
         fi
 
         if [ $(logname) != $LOGNAME ]; then
