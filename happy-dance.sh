@@ -64,6 +64,11 @@ UNAME=$(uname -s)
 # the version check from now on.
 VERSION=`ssh-keygen -t rsa -f "${HAPPYTMP}/version.check" -o -a 100 -q -N "" < /dev/null 2> /dev/null; echo $?`
 
+# Constants
+MACs="hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-ripemd160-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,hmac-ripemd160,umac-128@openssh.com"
+KexAlgorithms="curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256"
+Ciphers="chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr"
+
 # What follows is just some introductory text.
 help() {
 printf "This script will give you ssh configs for clients and servers\nwhich should force the NSA to work for a living.
@@ -140,6 +145,44 @@ generate_moduli() {
         echo_red "Your OS doesn't have an $moduli_path file, so we have to generate one. This might take a while.\n"
         ssh-keygen -G "${HAPPYTMP}/moduli.all" -b 4096
         ssh-keygen -T "${moduli_path}" -f "${HAPPYTMP}/moduli.all"
+}
+
+modify_sshd_config() {
+        ssh_path="$1"
+        sshd_config="${ssh_path}/sshd_config"
+
+        # Make a backup before making any changes
+        cp "${sshd_config}" "${sshd_config}.bak"
+
+        # Remove weak keys from the config file
+        sed -i -e 's;^\(Host.*dsa.*\|Host.*host_key$\);#\1;' "${sshd_config}"
+
+        # Add keys if missing from the config file
+        if ! grep -q '^HostKey.*ed25519_key$' "${sshd_config}"; then
+                printf "HostKey %s/ssh_host_ed25519_key\n" ${ssh_path} >> "${sshd_config}"
+        fi
+        if ! grep -q '^HostKey.*rsa_key$' "${sshd_config}"; then
+                printf "HostKey %s/ssh_host_rsa_key\n" ${ssh_path} >> "${sshd_config}"
+        fi
+
+        if grep -q '^MACs' "${sshd_config}"; then
+                sed -i -e "s/^\(MACs.*\)/MACs $MACs/" ${sshd_config}
+        else
+                printf "MACs %s\n" $MACs >> "${sshd_config}"
+        fi
+
+        if grep -q '^Ciphers' "${sshd_config}"; then
+                sed -i -e "s/^\(Ciphers.*\)/Ciphers $Ciphers/" ${sshd_config}
+        else
+                printf "Ciphers %s\n" $Ciphers >> "${sshd_config}"
+        fi
+
+        if grep -q '^KexAlgorithms' "${sshd_config}"; then
+                sed -i -e "s/^\(KexAlgorithms.*\)/KexAlgorithms $KexAlgorithms/" ${sshd_config}
+        else
+                printf "KexAlgorithms %s\n" $KexAlgorithms >> "${sshd_config}"
+        fi
+
 }
 
 modify_moduli() {
@@ -235,11 +278,11 @@ ssh_client() {
 # the choice of passwording them has been removed from the user.
 
 ssh_server() {
-        echo_green "This option destroys all host keys and replaces your sshd_config file."
+        echo_green "This option destroys all host keys and updates your sshd_config file."
         echo_red "Are you sure want to proceed? (y/n) "
         read yn
         case $yn in
-                [Yy]*) echo_green "Replacing your ssh server configuration file.."
+                [Yy]*) echo_green "Updating your ssh server configuration file.."
                         ;;
                 *)
                         exit
