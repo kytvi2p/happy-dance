@@ -15,7 +15,7 @@
 # - Mac OS X Yosemite Niresh with Homebrew's openssh
 # - FreeBSD 10 & 11
 # - OpenBSD 5.7
-# - NetBSD 7.0 RC 1
+# - NetBSD 7.0
 # - Solaris 11.2 with CSWOpenSSH and 11.3 Beta with OpenSSH from the package manager
 
 # Notes:
