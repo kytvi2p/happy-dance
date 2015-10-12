@@ -325,3 +325,4 @@ while getopts "cs" opt; do
     esac
 done
 help # only displayed if no parameters were specified
+check_for_root
