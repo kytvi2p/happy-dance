@@ -101,7 +101,7 @@ fi
 
 check_for_root() {
         if [ $(id -u) -ne 0 ]; then
-                echo_red "This script must be run as root.\n"
+                echo_red "This option must be run as root.\n"
                 exit 1
         fi
 }
@@ -149,13 +149,14 @@ generate_moduli() {
 }
 
 modify_ssh_config() {
-        ssh_path="$1"
-        ssh_config="${ssh_path}/ssh_config"
+        ssh_config="${1}"
 
         # Backup before changing anything
-        cp "${ssh_config}" "${ssh_config}.bak"
+        [ -f "${ssh_config}" ] && cp "${ssh_config}" "${ssh_config}.bak"
 
-        if ! grep -q '^Host *' "${ssh_config}"; then
+        if grep -Eq '^.*Host \*$' "${ssh_config}" 2>/dev/null ; then
+                sed_i 's/^.*Host \*$/Host */' "${ssh_config}"
+        else
                 printf 'Host *\n' >> "${ssh_config}"
         fi
 
@@ -173,6 +174,7 @@ modify_ssh_config() {
 
         set_config_option "${ssh_config}" 'KexAlgorithms' "${KexAlgorithms}"
 }
+
 modify_sshd_config() {
         ssh_path="$1"
         sshd_config="${ssh_path}/sshd_config"
@@ -250,10 +252,22 @@ ssh_client() {
                         ;;
         esac
 
-        if [ -f /usr/local/etc/ssh/ssh_config ]; then
-                modify_ssh_config /usr/local/etc/ssh
+        if [ $(id -u) -eq 0 ]; then
+                echo_green 'Root access detected, editing global client configs'
+
+                if [ -f /usr/local/etc/ssh/ssh_config ]; then
+                        modify_ssh_config /usr/local/etc/ssh/ssh_config
+                else
+                        modify_ssh_config /etc/ssh/ssh_config
+                fi
+                [ -d /root/.ssh ] || mkdir -m700 /root/.ssh
+                modify_ssh_config /root/.ssh/config
         else
-                modify_ssh_config /etc/ssh
+                echo_green 'Non-root user detected, will update user client configs.'
+                [ -d $HOME/.ssh ] || mkdir -m700 $HOME/.ssh
+                modify_ssh_config $HOME/.ssh/config
+                echo_red 'To update the system client configs, re-run\n'
+                echo_red 'this command as root or with sudo.\n'
         fi
 
         if [ $(logname) != $LOGNAME ]; then
@@ -394,7 +408,7 @@ while getopts "cs" opt; do
     case $opt in
 
         c)
-            check_for_root && ssh_client
+            ssh_client
         ;;
 
         s)
@@ -403,4 +417,3 @@ while getopts "cs" opt; do
     esac
 done
 help # only displayed if no parameters were specified
-check_for_root
