@@ -123,11 +123,19 @@ freebsd_disable_insecure_key_types() {
 
 generate_host_ssh_keys() {
         ssh_path="$1"
-        cp etc/ssh/sshd_config "${ssh_path}/sshd_config"
-        cd "${ssh_path}"
-        rm ssh_host_*key*
-        ssh-keygen -t ed25519 -f ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
-        ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -q -N "" < /dev/null
+
+        modify_sshd_config "${ssh_path}"
+        rm -f ${ssh_path}/ssh_host_*key* > /dev/null 2>&1 || true
+        ssh-keygen -t ed25519 -f ${ssh_path}/ssh_host_ed25519_key -q -N "" < /dev/null 2> /dev/null
+        ssh-keygen -t rsa -b 4096 -f ${ssh_path}/ssh_host_rsa_key -q -N "" < /dev/null
+        case $UNAME in
+                FreeBSD)
+                        freebsd_disable_insecure_key_types
+                        ;;
+                NetBSD|OpenBSD)
+                        net_and_openbsd_disable_insecure_key_types "${ssh_path}"
+                        ;;
+        esac
         ED25519_fingerprint="$(ssh-keygen -l -f ${ssh_path}/ssh_host_ed25519_key.pub 2> /dev/null)"
         RSA_fingerprint="$(ssh-keygen -l -f ${ssh_path}/ssh_host_rsa_key.pub)"
         ED25519_fingerprint_MD5="$(ssh-keygen -l -E md5 -f ${ssh_path}/ssh_host_ed25519_key.pub 2> /dev/null || true)"
@@ -205,6 +213,26 @@ modify_moduli() {
         echo_green "Modifying your $moduli_path\n"
         awk '$5 > 2000' "$moduli_path" > "${HAPPYTMP}/moduli"
         mv "${HAPPYTMP}/moduli" "$moduli_path"
+}
+
+net_and_openbsd_disable_insecure_key_types() {
+        # Better way wanted!
+        sshd_path="${1}"
+        echo_green "Symlinking ${sshd_path}/ssh_host_*dsa_key \nand ${sshd_path}/ssh_host_key to /dev/null\n" >&2
+        local unwanted='
+            ssh_host_key
+            ssh_host_dsa_key
+            ssh_host_ecdsa_key
+        '
+        for each in $unwanted; do
+                ln -s /dev/null $sshd_path/$each
+        done
+
+        if [ $UNAME = 'NetBSD' ]; then
+                echo_red 'Preventing NetBSD from generating unwanted keys at boot...\n'
+                # NetBSD's sed supports -i natively, so let's not use the wrapped version
+                sed -i -e 's/\(\s*run_rc_command keygen\)/#\1/' /etc/rc.d/sshd
+        fi
 }
 
 print_for_solaris_users() {
@@ -372,8 +400,6 @@ ssh_server() {
         else
                 generate_host_ssh_keys "/etc/ssh"
         fi
-
-       [ $UNAME = 'FreeBSD' ] && freebsd_disable_insecure_key_types
 
         # This next bit of code just prints the key fingerprints. if the *_MD5
         # variables contain anything at all, they will print. Otherwise, that's
