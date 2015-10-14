@@ -261,6 +261,21 @@ sed_i() {
         mv "$HAPPYTMP/sed.out" "$2"
 }
 
+set_config_option() {
+        local file="${1}"
+        local key="${2}"
+        local value="${3}"
+        if $(echo $file |grep -q 'sshd_config'); then
+                local tab=''
+        else
+                local tab='     '
+        fi
+        if grep -q ".*${key}" "${file}"; then
+                sed_i "s/^.*${key}.*$/${tab}${key} ${value}/" "${file}"
+        else
+                echo "${tab}${key} ${value}" >> "${file}"
+        fi
+}
 
 # The ssh_client function takes the time to check for the existence of keys
 # because deleting or overwriting existing keys would be bad.
