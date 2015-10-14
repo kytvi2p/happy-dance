@@ -82,13 +82,13 @@ Check out the README and the script's source if you want to see how the sausage 
 
 Flags:
             -c  Set up a client. Use this if you're hardening your user config
-                to make connections to remote hosts.
+                to make connections to remote hosts. Can be run as a non-root user
+                to generate a hardened $HOME/.ssh/config.
             -s  Set up a server. Use this flag if you're hardening the ssh config
                 of a remote host to accept connections from users.
 
-NOTE: Setting up a user config will require sudo or root access to give you a
-new ssh_config file.
-
+NOTE: Setting up a system client configuration will require sudo or root access in order to update
+      your /etc/ssh/ssh_config file.
 "
 }
 
