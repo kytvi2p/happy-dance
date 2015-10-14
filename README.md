@@ -25,10 +25,6 @@ address to 127.0.0.1. From there, you would connect via ssh over your new
 .onion address. It beats moving the ssh port in terms of security through
 obscurity.
 
-KNOWN ISSUE: The client set-up this script provides is still (As of July 28th,
-2015) too hardcore for github.com. I had to comment out the KexAlgorithms line
-in /etc/ssh/ssh_config in order to push to github with ssh.
-
 To use this repository, OpenSSH 6.5 or higher is required. This scripts works
 on the following platforms:
 
