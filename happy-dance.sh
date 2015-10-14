@@ -159,47 +159,19 @@ modify_ssh_config() {
                 printf 'Host *\n' >> "${ssh_config}"
         fi
 
-        if grep -Eq '^.*ChallengeResponseAuthentication' ${ssh_config}; then
-                sed_i 's/^.*\(ChallengeResponseAuthentication\).*/     \1 no/' "${ssh_config}"
-        else
-                printf '     ChallengeResponseAuthentication no\n' >> "${ssh_config}"
-        fi
+        set_config_option "${ssh_config}" "ChallengeResponseAuthentication" "no"
 
-        if grep -Eq '^.*PasswordAuthentication' ${ssh_config}; then
-                sed_i 's/^.*\(PasswordAuthentication\).*/     \1 no/' "${ssh_config}"
-        else
-                printf '     PasswordAuthentication no\n' >> "${ssh_config}"
-        fi
+        set_config_option "${ssh_config}" 'PasswordAuthentication' 'no'
 
-        if grep -Eq '^.*PubkeyAuthentication' ${ssh_config}; then
-                sed_i 's/^.*\(PubkeyAuthentication\).*/     \1 yes/' "${ssh_config}"
-        else
-                printf '     PubkeyAuthentication yes\n' >> "${ssh_config}"
-        fi
+        set_config_option "${ssh_config}" 'PubkeyAuthentication' 'yes'
 
-        if grep -Eq '^.*MACs' "${ssh_config}"; then
-                sed_i "s/^.*\(MACs.*\)/     MACs $MACs/" "${ssh_config}"
-        else
-                printf "     MACs %s\n" $MACs >> "${ssh_config}"
-        fi
+        set_config_option "${ssh_config}"  'MACs' "${MACs}"
 
-        if grep -Eq '^.*Ciphers' "${ssh_config}"; then
-                sed_i "s/^.*\(Ciphers.*\)/     Ciphers $Ciphers/" "${ssh_config}"
-        else
-                printf "     Ciphers %s\n" $Ciphers >> "${ssh_config}"
-        fi
+        set_config_option "${ssh_config}" 'Ciphers' "${Ciphers}"
 
-        if grep -q '^.*HostKeyAlgorithms' "${ssh_config}"; then
-                sed_i "s/^.*\(HostKeyAlgorithms.*\)/     HostKeyAlgorithms $HostKeyAlgorithms/" "${ssh_config}"
-        else
-                printf "     HostKeyAlgorithms %s\n" $HostKeyAlgorithms >> "${ssh_config}"
-        fi
+        set_config_option "${ssh_config}" 'HostKeyAlgorithms' "${HostKeyAlgorithms}"
 
-        if grep -q '^.*KexAlgorithms' "${ssh_config}"; then
-                sed_i "s/^.*\(KexAlgorithms.*\)/     KexAlgorithms $KexAlgorithms/" "${ssh_config}"
-        else
-                printf "     KexAlgorithms %s\n" $KexAlgorithms >> "${ssh_config}"
-        fi
+        set_config_option "${ssh_config}" 'KexAlgorithms' "${KexAlgorithms}"
 }
 modify_sshd_config() {
         ssh_path="$1"
@@ -219,24 +191,11 @@ modify_sshd_config() {
                 printf "HostKey %s/ssh_host_rsa_key\n" ${ssh_path} >> "${sshd_config}"
         fi
 
-        if grep -q '^MACs' "${sshd_config}"; then
-                sed_i "s/^\(MACs.*\)/MACs $MACs/" "${sshd_config}"
-        else
-                printf "MACs %s\n" $MACs >> "${sshd_config}"
-        fi
+        set_config_option "${sshd_config}" 'MACs' "${MACs}"
 
-        if grep -q '^Ciphers' "${sshd_config}"; then
-                sed_i "s/^\(Ciphers.*\)/Ciphers $Ciphers/" "${sshd_config}"
-        else
-                printf "Ciphers %s\n" $Ciphers >> "${sshd_config}"
-        fi
+        set_config_option "${sshd_config}" 'Ciphers' "${Ciphers}"
 
-        if grep -q '^KexAlgorithms' "${sshd_config}"; then
-                sed_i "s/^\(KexAlgorithms.*\)/KexAlgorithms $KexAlgorithms/" "${sshd_config}"
-        else
-                printf "KexAlgorithms %s\n" $KexAlgorithms >> "${sshd_config}"
-        fi
-
+        set_config_option "${sshd_config}" 'KexAlgorithms' "${KexAlgorithms}"
 }
 
 modify_moduli() {
